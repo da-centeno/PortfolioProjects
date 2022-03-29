@@ -92,7 +92,6 @@ order by 1,2
 --Total Vaccinations
 Select CVDD.continent, CVDD.location, CVDD.date, population, CVDV.new_vaccinations, 
 SUM(cast(CVDV.new_vaccinations as bigint)) OVER (Partition by CVDD.location order by CVDV.location,CVDV.date) AS TotalVaccinated
---,(TotalVaccinated/population)*100
 From PortfolioProject1..COVIDDeaths as CVDD
 Join COVIDVaccinations as CVDV
 	On CVDD.location = CVDV.location 
