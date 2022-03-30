@@ -87,7 +87,7 @@ order by 1,2
 Select SUM(new_cases) TotalCases, SUM(cast(new_deaths as int)) TotalDeaths, (SUM(cast(new_deaths as int))/SUM(new_cases))*100 AS FatalityRate
 From PortfolioProject1..COVIDDeaths
 Where continent is not null
-order by 1,2
+
 
 --Total Vaccinations
 Select CVDD.continent, CVDD.location, CVDD.date, population, CVDV.new_vaccinations, 
@@ -237,16 +237,16 @@ Select *
 From CaseFatalityRate
 Order by CaseFatalityRate
 
---Maximum Deaths by Continent
-Create View MaxDeathsContinent as
-Select location, MAX(cast(total_deaths as float)) AS MaxDeaths
+--Total Deaths by Continent
+Create View TotalDeathsContinent as
+Select location, MAX(cast(total_deaths as float)) AS TotalDeaths
 From PortfolioProject1..COVIDDeaths
-Where continent is NULL AND location NOT LIKE '%income' AND location not like 'International'
+Where continent is NULL AND location NOT LIKE '%income' AND location not in ('International','World','European Union')
 Group by location
 
 Select *
-From MaxDeathsContinent
-order by MaxDeaths
+From TotalDeathsContinent
+order by TotalDeaths
 
 --Average Death Rate by Country
 Create View AverageDeathRate as
@@ -258,3 +258,47 @@ Group by population, location
 Select *
 From AverageDeathRate
 order by 4 DESC
+
+--Total Fatality Rate
+Create View TotalFatalityRate as 
+Select SUM(new_cases) TotalCases, SUM(cast(new_deaths as int)) TotalDeaths, (SUM(cast(new_deaths as int))/SUM(new_cases))*100 AS FatalityRate
+From PortfolioProject1..COVIDDeaths
+Where continent is not null
+
+
+Select *
+From TotalFatalityRate
+
+--Population Infected Percentage
+Create View PopInfectedPercent as
+Select location, population, MAX(total_cases) AS MaxCases, MAX((total_cases/population))*100 AS MaxInfectionRate
+From PortfolioProject1..COVIDDeaths
+Where continent is NOT NULL
+Group by population, location
+
+
+--Population Infected Percentage by Day
+Create View DailyPopInfected as
+Select location, population,date, MAX(total_cases) AS MaxCases, MAX((total_cases/population))*100 AS MaxInfectionRate
+From PortfolioProject1..COVIDDeaths
+Where continent is NOT NULL
+Group by population, location, date
+order by MaxInfectionRate desc
+
+--Total Vaccinated
+Create View TotalVaccinated as
+With VacRate (Continent, Location, date, population, new_vaccinations, TotalVaccinated) 
+as 
+(
+Select CVDD.continent, CVDD.location, CVDD.date, population, CVDV.new_vaccinations, 
+SUM(cast(CVDV.new_vaccinations as bigint)) OVER (Partition by CVDD.location order by CVDV.location,CVDV.date) AS TotalVaccinated
+From PortfolioProject1..COVIDDeaths as CVDD
+Join COVIDVaccinations as CVDV
+	On CVDD.location = CVDV.location 
+	AND CVDD.date = CVDV.date
+Where CVDD.continent is not null
+)
+Select Location, Max(TotalVaccinated) AS TotalVaccinated
+From VacRate
+Group by location, population
+--Order by 2
